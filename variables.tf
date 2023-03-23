@@ -48,7 +48,7 @@ variable "keycloak_admin_credentials_kms_key_id" {
 variable "keycloak_configuration_build_options" {
   type        = map(string)
   description = "Keycloak Configurations - Build Options. These options will be ignored by Keycloak if the provided image has already been configured"
-  default     = {
+  default = {
     KC_CACHE           = "ispn"
     KC_CACHE_STACK     = "kubernetes"
     KC_HEATH_ENABLED   = "true"
