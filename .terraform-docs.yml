@@ -1,0 +1,13 @@
+formatter: "markdown"
+
+header-from: "docs/header.md"
+
+content: ''
+
+output:
+  file: "README.md"
+  mode: replace
+  template: "{{ .Content }}"
+
+recursive:
+  enabled: true
