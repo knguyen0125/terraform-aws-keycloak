@@ -22,7 +22,7 @@ module "public_alb" {
   source  = "terraform-aws-modules/alb/aws"
   version = "8.5.0"
 
-  name               = "${var.name}-public"
+  name               = "${local.name}-public"
   load_balancer_type = "application"
 
   vpc_id = var.vpc_id

@@ -201,7 +201,7 @@ resource "aws_ecs_service" "keycloak" {
 
 # Keycloak Initial Admin
 resource "aws_secretsmanager_secret" "initial_admin_password" {
-  name = "${var.name}-initial-admin-password"
+  name = "${local.name}-initial-admin-password"
 
   kms_key_id = var.keycloak_admin_credentials_kms_key_id
 
