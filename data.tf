@@ -23,8 +23,9 @@ locals {
   service_discovery_namespace_name          = "${local.normalized_name}.local"
   infinispan_service_discovery_service_name = "infinispan"
 
-  java_max_memory     = tonumber(var.keycloak_container_limit_memory) < var.keycloak_system_reserved_memory ? var.keycloak_system_reserved_memory : tonumber(var.keycloak_container_limit_memory) - var.keycloak_system_reserved_memory
-  java_initial_memory = local.java_max_memory / 4 < var.keycloak_system_reserved_memory ? local.java_max_memory / 4 : local.java_max_memory / 4 - var.keycloak_system_reserved_memory
+
+  java_max_memory     = max(var.keycloak_container_limit_memory - var.keycloak_system_reserved_memory, var.keycloak_system_reserved_memory)
+  java_initial_memory = max(floor(local.java_max_memory / 4), var.keycloak_system_reserved_memory)
 
   keycloak_environment_variables = merge(var.is_optimized ? {} : var.keycloak_configuration_build_options, {
     KC_LOG_LEVEL          = var.keycloak_log_level
@@ -69,7 +70,7 @@ data "aws_kms_key" "keycloak_database_configuration_kms_key" {
 
 data "aws_iam_policy_document" "ecs_task_execution_policy" {
   statement {
-    effect = "Allow"
+    effect  = "Allow"
     actions = [
       "secretsmanager:GetSecretValue",
     ]
@@ -82,7 +83,7 @@ data "aws_iam_policy_document" "ecs_task_execution_policy" {
     for_each = var.keycloak_admin_credentials_kms_key_id == null ? [] : [1]
 
     content {
-      effect = "Allow"
+      effect  = "Allow"
       actions = [
         "kms:Decrypt",
       ]
@@ -96,7 +97,7 @@ data "aws_iam_policy_document" "ecs_task_execution_policy" {
     for_each = var.keycloak_database_configuration_kms_key_id == null ? [] : [1]
 
     content {
-      effect = "Allow"
+      effect  = "Allow"
       actions = [
         "kms:Decrypt",
       ]

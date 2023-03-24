@@ -11,15 +11,15 @@ variable "keycloak_image" {
 }
 
 variable "keycloak_container_limit_cpu" {
-  type        = string
-  description = "Keycloak container CPU limit"
-  default     = "1024"
+  type        = number
+  description = "Keycloak container CPU limit. 1024 = 1 vCPU"
+  default     = 1024
 }
 
 variable "keycloak_container_limit_memory" {
-  type        = string
-  description = "Keycloak container memory limit"
-  default     = "2048"
+  type        = number
+  description = "Keycloak container memory limit, in MiB"
+  default     = 2048
 }
 
 variable "hostname" {
@@ -48,7 +48,7 @@ variable "keycloak_admin_credentials_kms_key_id" {
 variable "keycloak_configuration_build_options" {
   type        = map(string)
   description = "Keycloak Configurations - Build Options. These options will be ignored by Keycloak if the provided image has already been configured"
-  default = {
+  default     = {
     KC_CACHE           = "ispn"
     KC_CACHE_STACK     = "kubernetes"
     KC_HEALTH_ENABLED  = "true"
@@ -109,7 +109,7 @@ variable "keycloak_subnet_ids" {
 
 variable "is_optimized" {
   type        = bool
-  description = "Whether keycloak is optimized for production. If `true`, Keycloak will ignore build configurations and use the provide image. Defaults to `false` because we're using Keycloak official image"
+  description = "Whether keycloak is optimized for production. If `true`, Keycloak will ignore build configurations and assume that the provided image is already optimized. Defaults to `false` because we're using Keycloak official image"
   default     = false
 }
 

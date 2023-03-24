@@ -84,8 +84,8 @@ resource "aws_ecs_task_definition" "keycloak" {
     }
   ])
 
-  cpu    = var.keycloak_container_limit_cpu
-  memory = var.keycloak_container_limit_memory
+  cpu    = tostring(var.keycloak_container_limit_cpu)
+  memory = tostring(var.keycloak_container_limit_memory)
 
   execution_role_arn = module.ecs_task_execution_role.iam_role_arn
 
