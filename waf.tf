@@ -2,6 +2,7 @@ resource "aws_wafv2_web_acl" "this" {
   name  = "${var.name}-acl"
   scope = "REGIONAL"
 
+  # Allow traffics by default
   default_action {
     allow {}
   }
@@ -11,9 +12,7 @@ resource "aws_wafv2_web_acl" "this" {
     priority = 1
 
     override_action {
-      count {
-
-      }
+      none {}
     }
 
     statement {
@@ -35,9 +34,7 @@ resource "aws_wafv2_web_acl" "this" {
     priority = 2
 
     override_action {
-      count {
-
-      }
+      none {}
     }
 
     statement {
@@ -54,15 +51,12 @@ resource "aws_wafv2_web_acl" "this" {
     }
   }
 
-
   rule {
     name     = "AWS-AWSManagedRulesLinuxRuleSet"
     priority = 3
 
     override_action {
-      count {
-
-      }
+      none {}
     }
 
     statement {
@@ -79,12 +73,35 @@ resource "aws_wafv2_web_acl" "this" {
     }
   }
 
+  rule {
+    name     = "AWS-AWSManagedRulesAmazonIpReputationList"
+    priority = 4
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesAmazonIpReputationList"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWS-AWSManagedRulesAmazonIpReputationList"
+      sampled_requests_enabled   = true
+    }
+  }
 
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "ExternalACL"
     sampled_requests_enabled   = true
   }
+
+  tags = var.tags
 }
 
 resource "aws_wafv2_web_acl_association" "this" {

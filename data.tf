@@ -1,8 +1,23 @@
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
+resource "random_string" "suffix" {
+  length  = 6
+  special = false
+  upper   = false
+}
+
+resource "random_password" "keycloak_admin_initial_password" {
+  count = var.keycloak_admin_initial_password == null ? 1 : 0
+
+  length = 16
+}
+
 locals {
-  name = var.name
+  name = "${var.name}-${random_string.suffix.result}"
+
+  keycloak_admin_username         = var.keycloak_admin_username
+  keycloak_admin_initial_password = var.keycloak_admin_initial_password == null ? random_password.keycloak_admin_initial_password[0].result : var.keycloak_admin_initial_password
 
   normalized_name                           = lower(replace(local.name, "/[^a-zA-Z0-9]/", "-"))
   service_discovery_namespace_name          = "${local.normalized_name}.local"
@@ -24,7 +39,7 @@ locals {
 
 
     JAVA_OPTS_APPEND = "-Djgroups.dns.query=${local.infinispan_service_discovery_service_name}.${local.service_discovery_namespace_name} -Xmx${local.java_max_memory}m -Xms${local.java_initial_memory}m "
-  })
+  }, var.keycloak_additional_environment_variables)
 
   keycloak_secrets = {
     "KEYCLOAK_ADMIN"          = "${aws_secretsmanager_secret.initial_admin_password.arn}:username::"
@@ -59,8 +74,7 @@ data "aws_iam_policy_document" "ecs_task_execution_policy" {
       "secretsmanager:GetSecretValue",
     ]
     resources = [
-      aws_secretsmanager_secret.initial_admin_password.arn,
-      var.keycloak_database_configuration_secret_manager_arn
+      aws_secretsmanager_secret.initial_admin_password.arn, var.keycloak_database_configuration_secret_manager_arn
     ]
   }
 

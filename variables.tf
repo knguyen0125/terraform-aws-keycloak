@@ -147,3 +147,15 @@ variable "keycloak_system_reserved_memory" {
   description = "Keycloak System Reserved Memory"
   default     = 256
 }
+
+variable "tags" {
+  type        = map(string)
+  description = "Tags to apply to all resources"
+  default     = {}
+}
+
+variable "keycloak_additional_environment_variables" {
+  type        = map(string)
+  description = "Additional environment variables to pass to the Keycloak container"
+  default     = {}
+}

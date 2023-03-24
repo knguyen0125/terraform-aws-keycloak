@@ -13,6 +13,8 @@ module "public_alb_security_group" {
 
   egress_cidr_blocks = ["0.0.0.0/0"]
   egress_rules       = ["all-all"]
+
+  tags = var.tags
 }
 
 # ALB
@@ -108,11 +110,14 @@ module "public_alb" {
       conditions = [
         {
           host_headers = [var.hostname]
-          }, {
+        },
+        {
           # The following paths are recommended for Keycloak. See https://www.keycloak.org/server/reverseproxy#_exposed_path_recommendations
           path_patterns = ["/js/*", "/realms/*", "/resources/*", "/robots.txt"]
         }
       ]
     }
   ]
+
+  tags = var.tags
 }

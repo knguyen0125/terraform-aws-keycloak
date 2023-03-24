@@ -2,6 +2,8 @@
 resource "aws_iam_policy" "ecs_task_execution_policy" {
   name   = "${local.name}-ecs-task-execution-policy"
   policy = data.aws_iam_policy_document.ecs_task_execution_policy.json
+
+  tags = var.tags
 }
 
 module "ecs_task_execution_role" {
@@ -20,6 +22,8 @@ module "ecs_task_execution_role" {
     "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
     aws_iam_policy.ecs_task_execution_policy.arn
   ]
+
+  tags = var.tags
 }
 
 # ECS
@@ -27,6 +31,8 @@ resource "aws_cloudwatch_log_group" "ecs_log_group" {
   name = "/ecs/${local.name}"
 
   retention_in_days = var.ecs_log_retention_in_days
+
+  tags = var.tags
 }
 
 resource "aws_ecs_task_definition" "keycloak" {
@@ -43,11 +49,13 @@ resource "aws_ecs_task_definition" "keycloak" {
           name          = "keycloak-http"
           containerPort = var.keycloak_http_port
           protocol      = "tcp"
-          }, {
+        },
+        {
           name          = "keycloak-https"
           containerPort = var.keycloak_https_port
           protocol      = "tcp"
-          }, {
+        },
+        {
           name          = "keycloak-jgroups"
           containerPort = var.keycloak_jgroups_port
           protocol      = "tcp"
@@ -74,9 +82,7 @@ resource "aws_ecs_task_definition" "keycloak" {
         }
       }
     }
-    ]
-
-  )
+  ])
 
   cpu    = var.keycloak_container_limit_cpu
   memory = var.keycloak_container_limit_memory
@@ -91,10 +97,14 @@ resource "aws_ecs_task_definition" "keycloak" {
     cpu_architecture        = "X86_64"
     operating_system_family = "LINUX"
   }
+
+  tags = var.tags
 }
 
 resource "aws_ecs_cluster" "keycloak" {
   name = "${local.name}-cluster"
+
+  tags = var.tags
 }
 
 resource "aws_ecs_cluster_capacity_providers" "keycloak" {
@@ -121,6 +131,8 @@ module "keycloak_ingress" {
       rule = "all-all"
     }
   ]
+
+  tags = var.tags
 }
 
 module "keycloak_egress" {
@@ -134,6 +146,8 @@ module "keycloak_egress" {
   # Keycloak needs to be able to call other services in the cluster
   egress_cidr_blocks = ["0.0.0.0/0"]
   egress_rules       = ["all-all"]
+
+  tags = var.tags
 }
 
 resource "aws_ecs_service" "keycloak" {
@@ -180,25 +194,18 @@ resource "aws_ecs_service" "keycloak" {
       desired_count
     ]
   }
+
+  tags = var.tags
 }
 
 
 # Keycloak Initial Admin
-resource "random_password" "keycloak_admin_initial_password" {
-  count = var.keycloak_admin_initial_password == null ? 1 : 0
-
-  length = 16
-}
-
-locals {
-  keycloak_admin_username         = var.keycloak_admin_username
-  keycloak_admin_initial_password = var.keycloak_admin_initial_password == null ? random_password.keycloak_admin_initial_password[0].result : var.keycloak_admin_initial_password
-}
-
 resource "aws_secretsmanager_secret" "initial_admin_password" {
   name = "${var.name}-initial-admin-password"
 
   kms_key_id = var.keycloak_admin_credentials_kms_key_id
+
+  tags = var.tags
 }
 
 resource "aws_secretsmanager_secret_version" "initial_admin_password" {
@@ -214,6 +221,8 @@ resource "aws_service_discovery_private_dns_namespace" "keycloak" {
   name        = local.service_discovery_namespace_name
   description = "Service Discovery Namespace for Keycloak"
   vpc         = var.vpc_id
+
+  tags = var.tags
 }
 
 resource "aws_service_discovery_service" "infinispan" {
@@ -233,5 +242,7 @@ resource "aws_service_discovery_service" "infinispan" {
   health_check_custom_config {
     failure_threshold = 1
   }
+
+  tags = var.tags
 }
 
