@@ -51,7 +51,7 @@ variable "keycloak_configuration_build_options" {
   default = {
     KC_CACHE           = "ispn"
     KC_CACHE_STACK     = "kubernetes"
-    KC_HEATH_ENABLED   = "true"
+    KC_HEALTH_ENABLED  = "true"
     KC_METRICS_ENABLED = "true"
     KC_DB              = "postgres"
   }
@@ -116,4 +116,34 @@ variable "is_optimized" {
 variable "public_alb_subnet_ids" {
   type        = list(string)
   description = "Subnet IDs to deploy the public ALB"
+}
+
+variable "keycloak_http_port" {
+  type        = number
+  description = "Keycloak HTTP Port"
+  default     = 8080
+}
+
+variable "keycloak_https_port" {
+  type        = number
+  description = "Keycloak HTTPS Port"
+  default     = 8443
+}
+
+variable "keycloak_jgroups_port" {
+  type        = number
+  description = "Keycloak JGroups Port"
+  default     = 7800
+}
+
+variable "additional_security_groups" {
+  type        = list(string)
+  description = "Additional Security Groups to attach to the Keycloak cluster"
+  default     = []
+}
+
+variable "keycloak_system_reserved_memory" {
+  type        = number
+  description = "Keycloak System Reserved Memory"
+  default     = 256
 }

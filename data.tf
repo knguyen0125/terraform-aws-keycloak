@@ -4,9 +4,12 @@ data "aws_caller_identity" "current" {}
 locals {
   name = var.name
 
-  normalized_name = replace(local.name, "/[^a-zA-Z0-9]/", "-")
-  service_discovery_namespace_name = "${local.normalized_name}.local"
+  normalized_name                           = lower(replace(local.name, "/[^a-zA-Z0-9]/", "-"))
+  service_discovery_namespace_name          = "${local.normalized_name}.local"
   infinispan_service_discovery_service_name = "infinispan"
+
+  java_max_memory     = tonumber(var.keycloak_container_limit_memory) < var.keycloak_system_reserved_memory ? var.keycloak_system_reserved_memory : tonumber(var.keycloak_container_limit_memory) - var.keycloak_system_reserved_memory
+  java_initial_memory = local.java_max_memory / 4 < var.keycloak_system_reserved_memory ? local.java_max_memory / 4 : local.java_max_memory / 4 - var.keycloak_system_reserved_memory
 
   keycloak_environment_variables = merge(var.is_optimized ? {} : var.keycloak_configuration_build_options, {
     KC_LOG_LEVEL          = var.keycloak_log_level
@@ -16,18 +19,23 @@ locals {
     KC_PROXY        = "edge"
     KC_HOSTNAME     = var.hostname
     KC_HTTP_ENABLED = "true"
+    KC_HTTP_PORT    = "${var.keycloak_http_port}"
+    KC_HTTPS_PORT   = "${var.keycloak_https_port}"
 
-    JAVA_OPTS_APPEND = "-Djgroups.dns.query=${local.infinispan_service_discovery_service_name}.${local.service_discovery_namespace_name}"
+
+    JAVA_OPTS_APPEND = "-Djgroups.dns.query=${local.infinispan_service_discovery_service_name}.${local.service_discovery_namespace_name} -Xmx${local.java_max_memory}m -Xms${local.java_initial_memory}m "
   })
 
   keycloak_secrets = {
     "KEYCLOAK_ADMIN"          = "${aws_secretsmanager_secret.initial_admin_password.arn}:username::"
     "KEYCLOAK_ADMIN_PASSWORD" = "${aws_secretsmanager_secret.initial_admin_password.arn}:password::"
-    "KC_DB_URL_HOST"          = "${var.keycloak_database_configuration_secret_manager_arn}:host::"
-    "KC_DB_URL_PORT"          = "${var.keycloak_database_configuration_secret_manager_arn}:port::"
-    "KC_DB_URL_DATABASE"      = "${var.keycloak_database_configuration_secret_manager_arn}:dbname::"
-    "KC_DB_URL_USERNAME"      = "${var.keycloak_database_configuration_secret_manager_arn}:username::"
-    "KC_DB_URL_PASSWORD"      = "${var.keycloak_database_configuration_secret_manager_arn}:password::"
+
+    "KC_DB_URL_HOST"     = "${var.keycloak_database_configuration_secret_manager_arn}:host::"
+    "KC_DB_URL_PORT"     = "${var.keycloak_database_configuration_secret_manager_arn}:port::"
+    "KC_DB_URL_DATABASE" = "${var.keycloak_database_configuration_secret_manager_arn}:dbname::"
+
+    "KC_DB_USERNAME" = "${var.keycloak_database_configuration_secret_manager_arn}:username::"
+    "KC_DB_PASSWORD" = "${var.keycloak_database_configuration_secret_manager_arn}:password::"
   }
 }
 
@@ -48,7 +56,7 @@ data "aws_iam_policy_document" "ecs_task_execution_policy" {
   statement {
     effect = "Allow"
     actions = [
-      "secretmanager:GetSecretValue",
+      "secretsmanager:GetSecretValue",
     ]
     resources = [
       aws_secretsmanager_secret.initial_admin_password.arn,

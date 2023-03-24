@@ -8,7 +8,8 @@ module "ecs_task_execution_role" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
   version = "5.14.3"
 
-  role_name = "${local.name}-ecs-task-execution-role"
+  create_role = true
+  role_name   = "${local.name}-ecs-task-execution-role"
 
   role_requires_mfa = false
 
@@ -40,35 +41,35 @@ resource "aws_ecs_task_definition" "keycloak" {
       portMappings = [
         {
           name          = "keycloak-http"
-          containerPort = 8080
+          containerPort = var.keycloak_http_port
           protocol      = "tcp"
           }, {
           name          = "keycloak-https"
-          containerPort = 8443
+          containerPort = var.keycloak_https_port
           protocol      = "tcp"
           }, {
           name          = "keycloak-jgroups"
-          containerPort = 7600
+          containerPort = var.keycloak_jgroups_port
           protocol      = "tcp"
         }
       ]
       environment = [
         for k, v in local.keycloak_environment_variables : {
-          name  = k
-          value = v
+          name  = tostring(k)
+          value = tostring(v)
         }
       ]
       secrets = [
         for k, v in local.keycloak_secrets : {
-          name      = k
-          valueFrom = v
+          name      = tostring(k)
+          valueFrom = tostring(v)
         }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.ecs_log_group.name
-          "awslogs-region"        = data.aws_region.current
+          "awslogs-region"        = data.aws_region.current.id
           "awslogs-stream-prefix" = "keycloak"
         }
       }
@@ -104,7 +105,7 @@ resource "aws_ecs_cluster_capacity_providers" "keycloak" {
 }
 
 # Keycloak Security Group - Unrestricted Access to Keycloak from self
-module "keycloak_security_group" {
+module "keycloak_ingress" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "4.17.1"
 
@@ -112,13 +113,25 @@ module "keycloak_security_group" {
   description = "Keycloak Security Group - Unrestricted Access to Keycloak from self"
   vpc_id      = var.vpc_id
 
+  # Allow ingress to self. This Security group is also attached to the public load balancer
+  # To allow access to Keycloak
   ingress_cidr_blocks = ["0.0.0.0/0"]
   ingress_with_self = [
     {
       rule = "all-all"
     }
   ]
+}
 
+module "keycloak_egress" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "4.17.1"
+
+  name        = "${local.name}-egress-sg"
+  description = "Keycloak Security Group - Egress from Keycloak"
+  vpc_id      = var.vpc_id
+
+  # Keycloak needs to be able to call other services in the cluster
   egress_cidr_blocks = ["0.0.0.0/0"]
   egress_rules       = ["all-all"]
 }
@@ -131,11 +144,11 @@ resource "aws_ecs_service" "keycloak" {
   desired_count = var.keycloak_desired_count
 
   network_configuration {
-    assign_public_ip = false
+    assign_public_ip = true
     subnets          = var.keycloak_subnet_ids
-    security_groups = [
-      module.keycloak_security_group.security_group_id
-    ]
+    security_groups = concat([
+      module.keycloak_ingress.security_group_id, module.keycloak_egress.security_group_id
+    ], var.additional_security_groups)
   }
 
   cluster = aws_ecs_cluster.keycloak.name
@@ -150,10 +163,9 @@ resource "aws_ecs_service" "keycloak" {
   }
 
   load_balancer {
-    elb_name         = module.public_alb.lb_id
     target_group_arn = module.public_alb.target_group_arns[0]
     container_name   = "keycloak"
-    container_port   = 8080
+    container_port   = var.keycloak_http_port
   }
 
   health_check_grace_period_seconds = 300
@@ -161,7 +173,6 @@ resource "aws_ecs_service" "keycloak" {
   service_registries {
     registry_arn   = aws_service_discovery_service.infinispan.arn
     container_name = "keycloak"
-    container_port = 7600
   }
 
   lifecycle {

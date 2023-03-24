@@ -8,7 +8,7 @@ module "public_alb_security_group" {
 
 
   ingress_cidr_blocks = ["0.0.0.0/0"]
-  ingress_rules       = ["https-443-tcp"]
+  ingress_rules       = ["https-443-tcp", "http-80-tcp"]
 
 
   egress_cidr_blocks = ["0.0.0.0/0"]
@@ -28,18 +28,18 @@ module "public_alb" {
   subnets = var.public_alb_subnet_ids
 
   security_groups = [
-    module.keycloak_security_group.security_group_id,
-    module.public_alb_security_group.security_group_id
+    module.keycloak_egress.security_group_id, module.public_alb_security_group.security_group_id
   ]
 
   preserve_host_header = true
 
   target_groups = [
     {
-      name_prefix      = "${local.name}-https"
-      backend_protocol = "HTTP"
-      backend_port     = 8080
-      target_type      = "ip"
+      name                 = "${local.name}-https"
+      backend_protocol     = "HTTP"
+      backend_port         = var.keycloak_http_port
+      target_type          = "ip"
+      deregistration_delay = 60
       health_check = {
         enabled             = true
         path                = "/health/ready"
