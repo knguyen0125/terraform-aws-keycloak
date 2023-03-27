@@ -83,7 +83,7 @@ resource "aws_acm_certificate" "this" {
 module "keycloak" {
   source = "../.."
 
-  keycloak_desired_count = 1
+  desired_capacity = 1
 
   hostname = var.hostname
 

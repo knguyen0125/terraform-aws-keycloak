@@ -18,7 +18,7 @@ module "ecs_task_execution_role" {
   trusted_role_services = ["ecs-tasks.amazonaws.com"]
 
   number_of_custom_role_policy_arns = 2
-  custom_role_policy_arns = [
+  custom_role_policy_arns           = [
     "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
     aws_iam_policy.ecs_task_execution_policy.arn
   ]
@@ -40,22 +40,20 @@ resource "aws_ecs_task_definition" "keycloak" {
 
   container_definitions = jsonencode([
     {
-      name      = "keycloak"
-      image     = var.keycloak_image
-      command   = var.is_optimized ? ["start", "--optimized"] : ["start"]
-      essential = true
+      name         = "keycloak"
+      image        = var.keycloak_image
+      command      = var.is_optimized ? ["start", "--optimized"] : ["start"]
+      essential    = true
       portMappings = [
         {
           name          = "keycloak-http"
           containerPort = var.keycloak_http_port
           protocol      = "tcp"
-        },
-        {
+        }, {
           name          = "keycloak-https"
           containerPort = var.keycloak_https_port
           protocol      = "tcp"
-        },
-        {
+        }, {
           name          = "keycloak-jgroups"
           containerPort = var.keycloak_jgroups_port
           protocol      = "tcp"
@@ -75,7 +73,7 @@ resource "aws_ecs_task_definition" "keycloak" {
       ]
       logConfiguration = {
         logDriver = "awslogs"
-        options = {
+        options   = {
           "awslogs-group"         = aws_cloudwatch_log_group.ecs_log_group.name
           "awslogs-region"        = data.aws_region.current.id
           "awslogs-stream-prefix" = "keycloak"
@@ -89,7 +87,7 @@ resource "aws_ecs_task_definition" "keycloak" {
 
   execution_role_arn = module.ecs_task_execution_role.iam_role_arn
 
-  network_mode = "awsvpc"
+  network_mode             = "awsvpc"
   requires_compatibilities = [
     "FARGATE"
   ]
@@ -108,7 +106,7 @@ resource "aws_ecs_cluster" "keycloak" {
 }
 
 resource "aws_ecs_cluster_capacity_providers" "keycloak" {
-  cluster_name = aws_ecs_cluster.keycloak.name
+  cluster_name       = aws_ecs_cluster.keycloak.name
   capacity_providers = [
     "FARGATE"
   ]
@@ -126,7 +124,7 @@ module "keycloak_ingress" {
   # Allow ingress to self. This Security group is also attached to the public load balancer
   # To allow access to Keycloak
   ingress_cidr_blocks = ["0.0.0.0/0"]
-  ingress_with_self = [
+  ingress_with_self   = [
     {
       rule = "all-all"
     }
@@ -155,12 +153,12 @@ resource "aws_ecs_service" "keycloak" {
 
   task_definition = aws_ecs_task_definition.keycloak.family
 
-  desired_count = var.keycloak_desired_count
+  desired_count = var.desired_capacity
 
   network_configuration {
     assign_public_ip = true
     subnets          = var.keycloak_subnet_ids
-    security_groups = concat([
+    security_groups  = concat([
       module.keycloak_ingress.security_group_id, module.keycloak_egress.security_group_id
     ], var.additional_security_groups)
   }
@@ -246,3 +244,52 @@ resource "aws_service_discovery_service" "infinispan" {
   tags = var.tags
 }
 
+resource "aws_appautoscaling_target" "this" {
+  count              = var.autoscaling_enabled ? 1 : 0
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.keycloak.name}/${aws_ecs_service.keycloak.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+
+  max_capacity = var.autoscaling_max_capacity
+  min_capacity = var.autoscaling_min_capacity
+}
+
+resource "aws_appautoscaling_policy" "cpu" {
+  count              = var.autoscaling_enabled && var.autoscaling_cpu_enabled ? 1 : 0
+  name               = "${local.name}-cpu"
+  policy_type        = "TargetTrackingScaling"
+  service_namespace  = aws_appautoscaling_target.this.service_namespace
+  resource_id        = aws_appautoscaling_target.this.resource_id
+  scalable_dimension = aws_appautoscaling_target.this.scalable_dimension
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+
+    target_value       = var.autoscaling_cpu_target
+    scale_in_cooldown  = var.autoscaling_cpu_scale_in_cooldown
+    scale_out_cooldown = var.autoscaling_cpu_scale_out_cooldown
+    disable_scale_in   = var.autoscaling_cpu_disable_scale_in
+  }
+}
+
+resource "aws_appautoscaling_policy" "memory" {
+  count              = var.autoscaling_enabled && var.autoscaling_memory_enabled ? 1 : 0
+  name               = "${local.name}-memory"
+  policy_type        = "TargetTrackingScaling"
+  service_namespace  = aws_appautoscaling_target.this.service_namespace
+  resource_id        = aws_appautoscaling_target.this.resource_id
+  scalable_dimension = aws_appautoscaling_target.this.scalable_dimension
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageMemoryUtilization"
+    }
+
+    target_value       = var.autoscaling_memory_target
+    scale_in_cooldown  = var.autoscaling_memory_scale_in_cooldown
+    scale_out_cooldown = var.autoscaling_memory_scale_out_cooldown
+    disable_scale_in   = var.autoscaling_memory_disable_scale_in
+  }
+}

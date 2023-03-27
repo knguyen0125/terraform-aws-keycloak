@@ -91,12 +91,6 @@ variable "ecs_log_retention_in_days" {
   default     = 7
 }
 
-variable "keycloak_desired_count" {
-  type        = number
-  description = "Number of Keycloak instances to run"
-  default     = 3
-}
-
 variable "vpc_id" {
   type        = string
   description = "VPC ID to deploy the Keycloak cluster"
@@ -159,3 +153,88 @@ variable "keycloak_additional_environment_variables" {
   description = "Additional environment variables to pass to the Keycloak container"
   default     = {}
 }
+
+variable "desired_capacity" {
+  type        = number
+  description = "Number of desired Keycloak instances to run. Only effective during the first deployment. After that, the autoscaling group will take care of the desired capacity"
+  default     = 3
+}
+
+variable "autoscaling_enabled" {
+  type        = bool
+  description = "Whether to enable autoscaling"
+  default     = true
+}
+
+variable "autoscaling_min_capacity" {
+  type        = number
+  description = "Minimum number of Keycloak instances to run"
+  default     = 2
+}
+
+variable "autoscaling_max_capacity" {
+  type        = number
+  description = "Maximum number of Keycloak instances to run"
+  default     = 3
+}
+
+variable "autoscaling_cpu_enabled" {
+  type        = bool
+  description = "Whether to enable autoscaling based on CPU utilization"
+  default     = true
+}
+
+variable "autoscaling_cpu_target" {
+  type        = number
+  description = "Average CPU utilization to trigger autoscaling"
+  default     = 50
+}
+
+variable "autoscaling_cpu_scale_in_cooldown" {
+  type        = number
+  description = "Cooldown period (in seconds) after a scale-in action has taken place"
+  default     = 300
+}
+
+variable "autoscaling_cpu_scale_out_cooldown" {
+  type        = number
+  description = "Cooldown period (in seconds) after a scale-out action has taken place"
+  default     = 300
+}
+
+variable "autoscaling_cpu_disable_scale_in" {
+  type        = bool
+  description = "Whether to disable scale-in actions"
+  default     = false
+}
+
+variable "autoscaling_memory_enabled" {
+  type        = bool
+  description = "Whether to enable autoscaling based on Memory utilization"
+  default     = true
+}
+
+variable "autoscaling_memory_target" {
+  type        = number
+  description = "Average Memory utilization to trigger autoscaling"
+  default     = 50
+}
+
+variable "autoscaling_memory_scale_in_cooldown" {
+  type        = number
+  description = "Cooldown period (in seconds) after a scale-in action has taken place"
+  default     = 300
+}
+
+variable "autoscaling_memory_scale_out_cooldown" {
+  type        = number
+  description = "Cooldown period (in seconds) after a scale-out action has taken place"
+  default     = 300
+}
+
+variable "autoscaling_memory_disable_scale_in" {
+  type        = bool
+  description = "Whether to disable scale-in actions"
+  default     = false
+}
+
