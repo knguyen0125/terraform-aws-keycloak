@@ -61,7 +61,7 @@ module "rds" {
 }
 
 resource "aws_secretsmanager_secret" "database" {
-  name = "keycloak-database"
+  name = "keycloak-database-1"
 }
 
 resource "aws_secretsmanager_secret_version" "databaes" {
@@ -90,11 +90,15 @@ module "keycloak" {
   keycloak_database_configuration_secret_manager_arn = aws_secretsmanager_secret.database.arn
 
   keycloak_subnet_ids   = [data.aws_subnets.subnets.ids[0], data.aws_subnets.subnets.ids[1]]
-  public_alb_subnet_ids = [data.aws_subnets.subnets.ids[0], data.aws_subnets.subnets.ids[1]]
+  public_load_balancer_subnet_ids = [data.aws_subnets.subnets.ids[0], data.aws_subnets.subnets.ids[1]]
 
   tls_acm_certificate_arn = aws_acm_certificate.this.arn
 
   vpc_id = data.aws_vpc.default.id
 
   additional_security_groups = [module.security_group.security_group_id]
+
+  enable_internal_load_balancer = true
+  internal_load_balancer_subnet_ids = [data.aws_subnets.subnets.ids[0], data.aws_subnets.subnets.ids[1]]
+  expose_admin_path_in_public_load_balancer = true
 }

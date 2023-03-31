@@ -107,7 +107,7 @@ variable "is_optimized" {
   default     = false
 }
 
-variable "public_alb_subnet_ids" {
+variable "public_load_balancer_subnet_ids" {
   type        = list(string)
   description = "Subnet IDs to deploy the public ALB"
 }
@@ -238,3 +238,20 @@ variable "autoscaling_memory_disable_scale_in" {
   default     = false
 }
 
+variable "enable_internal_load_balancer" {
+  type        = bool
+  description = "Whether to deploy an internal load balancer. The internal load balancer will not have WAF attached, but will allow user to access Keycloak from within the VPC and administer it"
+  default     = false
+}
+
+variable "internal_load_balancer_subnet_ids" {
+  type        = list(string)
+  description = "Subnet IDs to deploy the internal ALB"
+  default     = []
+}
+
+variable "expose_admin_path_in_public_load_balancer" {
+  type        = bool
+  description = "Whether to expose Keycloak's admin path in the public load balancer"
+  default     = false
+}

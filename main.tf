@@ -180,6 +180,16 @@ resource "aws_ecs_service" "keycloak" {
     container_port   = var.keycloak_http_port
   }
 
+  dynamic "load_balancer" {
+    for_each = var.enable_internal_load_balancer ? [1] : []
+
+    content {
+      target_group_arn = module.private_alb[0].target_group_arns[0]
+      container_name   = "keycloak"
+      container_port   = var.keycloak_http_port
+    }
+  }
+
   health_check_grace_period_seconds = 300
 
   service_registries {
@@ -258,9 +268,9 @@ resource "aws_appautoscaling_policy" "cpu" {
   count              = var.autoscaling_enabled && var.autoscaling_cpu_enabled ? 1 : 0
   name               = "${local.name}-cpu"
   policy_type        = "TargetTrackingScaling"
-  service_namespace  = aws_appautoscaling_target.this.service_namespace
-  resource_id        = aws_appautoscaling_target.this.resource_id
-  scalable_dimension = aws_appautoscaling_target.this.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.this[0].service_namespace
+  resource_id        = aws_appautoscaling_target.this[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.this[0].scalable_dimension
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
@@ -278,9 +288,9 @@ resource "aws_appautoscaling_policy" "memory" {
   count              = var.autoscaling_enabled && var.autoscaling_memory_enabled ? 1 : 0
   name               = "${local.name}-memory"
   policy_type        = "TargetTrackingScaling"
-  service_namespace  = aws_appautoscaling_target.this.service_namespace
-  resource_id        = aws_appautoscaling_target.this.resource_id
-  scalable_dimension = aws_appautoscaling_target.this.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.this[0].service_namespace
+  resource_id        = aws_appautoscaling_target.this[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.this[0].scalable_dimension
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
