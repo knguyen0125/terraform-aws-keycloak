@@ -61,7 +61,7 @@ module "rds" {
 }
 
 resource "aws_secretsmanager_secret" "database" {
-  name = "keycloak-database-1"
+  name_prefix = "kc-database-"
 }
 
 resource "aws_secretsmanager_secret_version" "databaes" {
@@ -89,7 +89,7 @@ module "keycloak" {
 
   keycloak_database_configuration_secret_manager_arn = aws_secretsmanager_secret.database.arn
 
-  keycloak_subnet_ids   = [data.aws_subnets.subnets.ids[0], data.aws_subnets.subnets.ids[1]]
+  keycloak_subnet_ids             = [data.aws_subnets.subnets.ids[0], data.aws_subnets.subnets.ids[1]]
   public_load_balancer_subnet_ids = [data.aws_subnets.subnets.ids[0], data.aws_subnets.subnets.ids[1]]
 
   tls_acm_certificate_arn = aws_acm_certificate.this.arn
@@ -98,7 +98,38 @@ module "keycloak" {
 
   additional_security_groups = [module.security_group.security_group_id]
 
-  enable_internal_load_balancer = true
-  internal_load_balancer_subnet_ids = [data.aws_subnets.subnets.ids[0], data.aws_subnets.subnets.ids[1]]
+  enable_internal_load_balancer             = false
+  internal_load_balancer_subnet_ids         = [data.aws_subnets.subnets.ids[0], data.aws_subnets.subnets.ids[1]]
   expose_admin_path_in_public_load_balancer = true
+}
+
+data "aws_ami" "al2" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  owners = ["amazon"]
+}
+
+module "bastion" {
+  source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "4.3.0"
+
+  ami = data.aws_ami.al2.id
+
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = [
+    module.security_group.security_group_id,
+    module.keycloak.keycloak_security_group_id
+  ]
+  subnet_id = data.aws_subnets.subnets.ids[0]
+
+  create_iam_instance_profile = true
+  iam_role_name               = "bastion"
+  iam_role_policies           = {
+    "AmazonSSMManagedInstanceCore" = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  }
 }

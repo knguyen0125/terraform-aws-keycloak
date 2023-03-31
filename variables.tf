@@ -255,3 +255,15 @@ variable "expose_admin_path_in_public_load_balancer" {
   description = "Whether to expose Keycloak's admin path in the public load balancer"
   default     = false
 }
+
+variable "ecs_wait_for_steady_state" {
+  type        = bool
+  description = "Whether to wait for the ECS service to reach a steady state after deployment"
+  default     = true
+}
+
+variable "service_discovery_namespace_name" {
+  type        = string
+  description = "Service Discovery namespace name. If not specified, defaults to `keycloak-{random_prefix}.local`"
+  default     = null
+}

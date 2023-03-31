@@ -19,9 +19,9 @@ locals {
   keycloak_admin_username         = var.keycloak_admin_username
   keycloak_admin_initial_password = var.keycloak_admin_initial_password == null ? random_password.keycloak_admin_initial_password[0].result : var.keycloak_admin_initial_password
 
-  normalized_name                           = lower(replace(local.name, "/[^a-zA-Z0-9]/", "-"))
-  service_discovery_namespace_name          = "${local.normalized_name}.local"
-  infinispan_service_discovery_service_name = "infinispan"
+  normalized_name                  = lower(replace(local.name, "/[^a-zA-Z0-9]/", "-"))
+  service_discovery_namespace_name = var.service_discovery_namespace_name == null ? "${local.normalized_name}.local" : var.service_discovery_namespace_name
+  service_discovery_service_name   = "instance"
 
 
   java_max_memory     = max(var.keycloak_container_limit_memory - var.keycloak_system_reserved_memory, var.keycloak_system_reserved_memory)
@@ -39,7 +39,7 @@ locals {
     KC_HTTPS_PORT   = "${var.keycloak_https_port}"
 
 
-    JAVA_OPTS_APPEND = "-Djgroups.dns.query=${local.infinispan_service_discovery_service_name}.${local.service_discovery_namespace_name} -Xmx${local.java_max_memory}m -Xms${local.java_initial_memory}m "
+    JAVA_OPTS_APPEND = "-Djgroups.dns.query=${local.service_discovery_service_name}.${local.service_discovery_namespace_name} -Xmx${local.java_max_memory}m -Xms${local.java_initial_memory}m "
   }, var.keycloak_additional_environment_variables)
 
   keycloak_secrets = {

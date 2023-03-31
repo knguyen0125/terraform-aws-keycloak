@@ -35,7 +35,7 @@ resource "aws_cloudwatch_log_group" "ecs_log_group" {
   tags = var.tags
 }
 
-resource "aws_ecs_task_definition" "keycloak" {
+resource "aws_ecs_task_definition" "this" {
   family = "${local.name}-task-definition"
 
   container_definitions = jsonencode([
@@ -148,10 +148,10 @@ module "keycloak_egress" {
   tags = var.tags
 }
 
-resource "aws_ecs_service" "keycloak" {
+resource "aws_ecs_service" "this" {
   name = "${local.name}-service"
 
-  task_definition = aws_ecs_task_definition.keycloak.family
+  task_definition = aws_ecs_task_definition.this.family
 
   desired_count = var.desired_capacity
 
@@ -192,8 +192,10 @@ resource "aws_ecs_service" "keycloak" {
 
   health_check_grace_period_seconds = 300
 
+  wait_for_steady_state = var.ecs_wait_for_steady_state
+
   service_registries {
-    registry_arn   = aws_service_discovery_service.infinispan.arn
+    registry_arn   = aws_service_discovery_service.this.arn
     container_name = "keycloak"
   }
 
@@ -225,7 +227,7 @@ resource "aws_secretsmanager_secret_version" "initial_admin_password" {
   })
 }
 
-resource "aws_service_discovery_private_dns_namespace" "keycloak" {
+resource "aws_service_discovery_private_dns_namespace" "this" {
   name        = local.service_discovery_namespace_name
   description = "Service Discovery Namespace for Keycloak"
   vpc         = var.vpc_id
@@ -233,11 +235,11 @@ resource "aws_service_discovery_private_dns_namespace" "keycloak" {
   tags = var.tags
 }
 
-resource "aws_service_discovery_service" "infinispan" {
-  name = local.infinispan_service_discovery_service_name
+resource "aws_service_discovery_service" "this" {
+  name = local.service_discovery_service_name
 
   dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.keycloak.id
+    namespace_id = aws_service_discovery_private_dns_namespace.this.id
 
     dns_records {
       ttl  = 10
@@ -257,7 +259,7 @@ resource "aws_service_discovery_service" "infinispan" {
 resource "aws_appautoscaling_target" "this" {
   count              = var.autoscaling_enabled ? 1 : 0
   service_namespace  = "ecs"
-  resource_id        = "service/${aws_ecs_cluster.keycloak.name}/${aws_ecs_service.keycloak.name}"
+  resource_id        = "service/${aws_ecs_cluster.keycloak.name}/${aws_ecs_service.this.name}"
   scalable_dimension = "ecs:service:DesiredCount"
 
   max_capacity = var.autoscaling_max_capacity
